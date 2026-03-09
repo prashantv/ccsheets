@@ -12,6 +12,7 @@ type Transaction struct {
 	ID          string `json:"id"`
 	Date        string `json:"date"`
 	Description string `json:"description"`
+	Location    string `json:"location,omitempty"`
 	Amount      Amount `json:"amount"`
 	Category    string `json:"category"`
 }

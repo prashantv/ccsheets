@@ -27,7 +27,10 @@ func LoadChase(r io.Reader) (csvtable.Table, error) {
 type ChaseParser struct{}
 
 func (ChaseParser) Parse(table csvtable.Table, row []string) (transaction.Transaction, error) {
-	date := row[table.Column("Date")]
+	date, err := formatDate(row[table.Column("Date")])
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
 	desc := row[table.Column("Description")]
 	category := row[table.Column("Category")]
 

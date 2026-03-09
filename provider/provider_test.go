@@ -30,7 +30,7 @@ func TestChaseParser(t *testing.T) {
 			),
 			wantTxns: []transaction.Transaction{
 				{
-					Date:        "01/15/2026",
+					Date:        "2026-01-15",
 					Description: "TACO PALACE",
 					Amount:      mustAmount(t, "42.50"),
 					Category:    "Food & Drink",
@@ -45,7 +45,7 @@ func TestChaseParser(t *testing.T) {
 			),
 			wantTxns: []transaction.Transaction{
 				{
-					Date:        "01/10/2026",
+					Date:        "2026-01-10",
 					Description: "AUTOMATIC PAYMENT - THANK",
 					Amount:      mustAmount(t, "-200.00"),
 				},
@@ -108,34 +108,69 @@ func TestAmexParser(t *testing.T) {
 		wantTxns []transaction.Transaction
 	}{
 		{
-			name: "platinum format",
+			name: "platinum with location in description",
 			giveCSV: csvLines(
 				"Date,Description,Card Member,Account #,Amount,Extended Details,Appears On Your Statement As,Address,City/State,Zip Code,Country,Reference,Category",
-				`02/01/2026,COFFEE ROASTERS,JANE DOE,-99001,5.75,"details",COFFEE ROASTERS,123 MAIN ST,"PORTLAND`+"\n"+`OR",97201,UNITED STATES,'320260101234567890',Merchandise & Supplies-Groceries`,
+				`02/01/2026,HBO Max             NEW YORK            NY,JANE DOE,-99001,5.75,"details",HBO Max,123 MAIN ST,"NEW YORK`+"\n"+`NY",10001,UNITED STATES,'320260101234567890',Merchandise & Supplies-Internet Purchase`,
 			),
 			wantTxns: []transaction.Transaction{
 				{
 					ID:          "320260101234567890",
-					Date:        "02/01/2026",
-					Description: "COFFEE ROASTERS",
+					Date:        "2026-02-01",
+					Description: "HBO Max",
+					Location:    "NEW YORK, NY",
 					Amount:      mustAmount(t, "5.75"),
+					Category:    "Merchandise & Supplies-Internet Purchase",
+				},
+			},
+		},
+		{
+			name: "platinum credit with no location",
+			giveCSV: csvLines(
+				"Date,Description,Card Member,Account #,Amount,Extended Details,Appears On Your Statement As,Address,City/State,Zip Code,Country,Reference,Category",
+				`02/01/2026,Platinum Digital Entertainment Credit,JANE DOE,-99001,-5.75,"details",Platinum Digital Entertainment Credit,,,,,'320260101234567891',Fees & Adjustments`,
+			),
+			wantTxns: []transaction.Transaction{
+				{
+					ID:          "320260101234567891",
+					Date:        "2026-02-01",
+					Description: "Platinum Digital Entertainment Credit",
+					Amount:      mustAmount(t, "-5.75"),
+					Category:    "Fees & Adjustments",
+				},
+			},
+		},
+		{
+			name: "blue with location in description",
+			giveCSV: csvLines(
+				"Date,Description,Amount,Extended Details,Appears On Your Statement As,Address,City/State,Zip Code,Country,Reference,Category",
+				`03/02/2026,AplPay SAFEWAY      SAN FRANCISCO       CA,36.17,"details",AplPay SAFEWAY,"298 KING ST","SAN FRANCISCO`+"\n"+`CA",94107,UNITED STATES,'320260620701362525',Merchandise & Supplies-Groceries`,
+			),
+			wantTxns: []transaction.Transaction{
+				{
+					ID:          "320260620701362525",
+					Date:        "2026-03-02",
+					Description: "AplPay SAFEWAY",
+					Location:    "SAN FRANCISCO, CA",
+					Amount:      mustAmount(t, "36.17"),
 					Category:    "Merchandise & Supplies-Groceries",
 				},
 			},
 		},
 		{
-			name: "blue format",
+			name: "short description not matching city",
 			giveCSV: csvLines(
 				"Date,Description,Amount,Extended Details,Appears On Your Statement As,Address,City/State,Zip Code,Country,Reference,Category",
-				`03/02/2026,GROCERY MART,36.17,"details",GROCERY MART,"298 KING ST","SAN FRANCISCO`+"\n"+`CA",94107,UNITED STATES,'320260620701362525',Merchandise & Supplies-Groceries`,
+				`03/02/2026,UBER,10.76,"details",Uber Trip,"1515 3RD ST","SAN FRANCISCO`+"\n"+`CA",94107,UNITED STATES,'320260620701362526',Transportation`,
 			),
 			wantTxns: []transaction.Transaction{
 				{
-					ID:          "320260620701362525",
-					Date:        "03/02/2026",
-					Description: "GROCERY MART",
-					Amount:      mustAmount(t, "36.17"),
-					Category:    "Merchandise & Supplies-Groceries",
+					ID:          "320260620701362526",
+					Date:        "2026-03-02",
+					Description: "UBER",
+					Location:    "SAN FRANCISCO, CA",
+					Amount:      mustAmount(t, "10.76"),
+					Category:    "Transportation",
 				},
 			},
 		},
@@ -171,30 +206,60 @@ func TestCitiParser(t *testing.T) {
 		wantTxns []transaction.Transaction
 	}{
 		{
-			name: "debit charge stays positive",
+			name: "debit charge with state extracted",
 			giveCSV: csvLines(
 				"Status,Date,Description,Debit,Credit,Member Name",
-				`Cleared,02/15/2026,"GAS STATION 1234",45.00,,JANE DOE`,
+				`Cleared,02/15/2026,"COSTCO WHSE #0144 SAN FRANCISCOCA",45.00,,JANE DOE`,
 			),
 			wantTxns: []transaction.Transaction{
 				{
-					Date:        "02/15/2026",
-					Description: "GAS STATION 1234",
+					Date:        "2026-02-15",
+					Description: "COSTCO WHSE #0144 SAN FRANCISCO",
+					Location:    "CA",
 					Amount:      mustAmount(t, "45.00"),
 				},
 			},
 		},
 		{
-			name: "credit payment becomes negative",
+			name: "debit with space before state",
+			giveCSV: csvLines(
+				"Status,Date,Description,Debit,Credit,Member Name",
+				`Cleared,01/11/2026,"TST*AURUM Los Altos CA",75.42,,JANE DOE`,
+			),
+			wantTxns: []transaction.Transaction{
+				{
+					Date:        "2026-01-11",
+					Description: "TST*AURUM Los Altos",
+					Location:    "CA",
+					Amount:      mustAmount(t, "75.42"),
+				},
+			},
+		},
+		{
+			name: "credit payment not split",
 			giveCSV: csvLines(
 				"Status,Date,Description,Debit,Credit,Member Name",
 				`Cleared,02/10/2026,"ONLINE PAYMENT THANK YOU",,500.00,JANE DOE`,
 			),
 			wantTxns: []transaction.Transaction{
 				{
-					Date:        "02/10/2026",
+					Date:        "2026-02-10",
 					Description: "ONLINE PAYMENT THANK YOU",
 					Amount:      mustAmount(t, "-500.00"),
+				},
+			},
+		},
+		{
+			name: "autopay not split",
+			giveCSV: csvLines(
+				"Status,Date,Description,Debit,Credit,Member Name",
+				`Cleared,02/14/2026,"AUTOPAY 210525023533040RAUTOPAY AUTO-PMT",,1233.79,JANE DOE`,
+			),
+			wantTxns: []transaction.Transaction{
+				{
+					Date:        "2026-02-14",
+					Description: "AUTOPAY 210525023533040RAUTOPAY AUTO-PMT",
+					Amount:      mustAmount(t, "-1233.79"),
 				},
 			},
 		},
@@ -236,6 +301,9 @@ func assertTxn(t *testing.T, got, want transaction.Transaction) {
 	}
 	if got.Description != want.Description {
 		t.Errorf("Description: got %q, want %q", got.Description, want.Description)
+	}
+	if got.Location != want.Location {
+		t.Errorf("Location: got %q, want %q", got.Location, want.Location)
 	}
 	if got.Amount != want.Amount {
 		t.Errorf("Amount: got %s, want %s", got.Amount, want.Amount)

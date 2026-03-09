@@ -87,13 +87,14 @@ func (c *Client) appendRows(ctx context.Context, txns []transaction.Transaction)
 			txn.ID,
 			txn.Date,
 			txn.Description,
+			txn.Location,
 			txn.Amount.String(),
 			txn.Category,
 		}
 	}
 
 	_, err := c.srv.Spreadsheets.Values.
-		Append(c.spreadsheetID, c.sheetRange("A:E"), &sheets.ValueRange{
+		Append(c.spreadsheetID, c.sheetRange("A:F"), &sheets.ValueRange{
 			Values: rows,
 		}).
 		ValueInputOption("USER_ENTERED").

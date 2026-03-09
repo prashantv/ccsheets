@@ -163,9 +163,9 @@ func providerFor(name string) (func(io.Reader) (csvtable.Table, error), transact
 
 func printTable(txns []transaction.Transaction) {
 	rows := make([][]string, len(txns)+1)
-	rows[0] = []string{"ID", "DATE", "DESCRIPTION", "AMOUNT", "CATEGORY"}
+	rows[0] = []string{"ID", "DATE", "DESCRIPTION", "LOCATION", "AMOUNT", "CATEGORY"}
 	for i, txn := range txns {
-		rows[i+1] = []string{txn.ID, txn.Date, txn.Description, txn.Amount.String(), txn.Category}
+		rows[i+1] = []string{txn.ID, txn.Date, txn.Description, txn.Location, txn.Amount.String(), txn.Category}
 	}
 
 	// Compute max width per column.
