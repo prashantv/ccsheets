@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/prashantv/ccsheets/csvtable"
 	"github.com/prashantv/ccsheets/provider"
@@ -107,12 +106,35 @@ func providerFor(name string) (func(io.Reader) (csvtable.Table, error), transact
 }
 
 func printTable(txns []transaction.Transaction) {
-	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tDATE\tDESCRIPTION\tAMOUNT\tCATEGORY")
-	for _, txn := range txns {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%v\t%s\n", txn.ID, txn.Date, txn.Description, txn.Amount, txn.Category)
+	rows := make([][]string, len(txns)+1)
+	rows[0] = []string{"ID", "DATE", "DESCRIPTION", "AMOUNT", "CATEGORY"}
+	for i, txn := range txns {
+		rows[i+1] = []string{txn.ID, txn.Date, txn.Description, txn.Amount.String(), txn.Category}
 	}
-	w.Flush()
+
+	// Compute max width per column.
+	widths := make([]int, len(rows[0]))
+	for _, row := range rows {
+		for col, val := range row {
+			if len(val) > widths[col] {
+				widths[col] = len(val)
+			}
+		}
+	}
+
+	for _, row := range rows {
+		for col, val := range row {
+			if col > 0 {
+				fmt.Print("  ")
+			}
+			if col < len(row)-1 {
+				fmt.Printf("%-*s", widths[col], val)
+			} else {
+				fmt.Print(val)
+			}
+		}
+		fmt.Println()
+	}
 }
 
 func printJSON(txns []transaction.Transaction) {
