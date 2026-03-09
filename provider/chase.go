@@ -1,9 +1,7 @@
 package provider
 
 import (
-	"fmt"
 	"io"
-	"strings"
 
 	"github.com/prashantv/ccsheets/csvtable"
 	"github.com/prashantv/ccsheets/transaction"
@@ -31,29 +29,20 @@ type ChaseParser struct{}
 func (ChaseParser) Parse(table csvtable.Table, row []string) (transaction.Transaction, error) {
 	date := row[table.Column("Date")]
 	desc := row[table.Column("Description")]
-	amount := row[table.Column("Amount")]
 	category := row[table.Column("Category")]
 
+	amount, err := transaction.ParseAmount(row[table.Column("Amount")])
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
 	// Chase uses negative amounts for charges; negate so charges are positive.
-	amount = negateAmount(amount)
+	amount = amount.Negate()
 
 	return transaction.Transaction{
-		ID:          transaction.GenerateID(date, desc, amount),
+		ID:          transaction.GenerateID(date, desc, amount.String()),
 		Date:        date,
 		Description: desc,
 		Amount:      amount,
 		Category:    category,
 	}, nil
-}
-
-// negateAmount flips the sign of a numeric string.
-func negateAmount(s string) string {
-	s = strings.TrimSpace(s)
-	if s == "" || s == "0" || s == "0.00" {
-		return s
-	}
-	if strings.HasPrefix(s, "-") {
-		return s[1:]
-	}
-	return fmt.Sprintf("-%s", s)
 }

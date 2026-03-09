@@ -32,16 +32,24 @@ func (CitiParser) Parse(table csvtable.Table, row []string) (transaction.Transac
 	credit := strings.TrimSpace(row[table.Column("Credit")])
 
 	// Debit = charges (positive), Credit = payments (show as negative).
-	amount := debit
-	if amount == "" {
-		amount = negateAmount(credit)
+	var amount transaction.Amount
+	var err error
+	if debit != "" {
+		amount, err = transaction.ParseAmount(debit)
+	} else {
+		amount, err = transaction.ParseAmount(credit)
+		if err == nil {
+			amount = amount.Negate()
+		}
+	}
+	if err != nil {
+		return transaction.Transaction{}, err
 	}
 
 	return transaction.Transaction{
-		ID:          transaction.GenerateID(date, desc, amount),
+		ID:          transaction.GenerateID(date, desc, amount.String()),
 		Date:        date,
 		Description: desc,
 		Amount:      amount,
-		Category:    "",
 	}, nil
 }

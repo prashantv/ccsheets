@@ -31,9 +31,13 @@ type AmexParser struct{}
 func (AmexParser) Parse(table csvtable.Table, row []string) (transaction.Transaction, error) {
 	date := row[table.Column("Date")]
 	desc := row[table.Column("Description")]
-	amount := row[table.Column("Amount")]
 	ref := row[table.Column("Reference")]
 	category := row[table.Column("Category")]
+
+	amount, err := transaction.ParseAmount(row[table.Column("Amount")])
+	if err != nil {
+		return transaction.Transaction{}, err
+	}
 
 	// Reference values are wrapped in single quotes, e.g. '320260630725324753'.
 	ref = strings.Trim(ref, "'")

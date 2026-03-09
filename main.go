@@ -104,7 +104,7 @@ func printTable(txns []transaction.Transaction) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tDATE\tDESCRIPTION\tAMOUNT\tCATEGORY")
 	for _, txn := range txns {
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", txn.ID, txn.Date, txn.Description, txn.Amount, txn.Category)
+		fmt.Fprintf(w, "%s\t%s\t%s\t%v\t%s\n", txn.ID, txn.Date, txn.Description, txn.Amount, txn.Category)
 	}
 	w.Flush()
 }

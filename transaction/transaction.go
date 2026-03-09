@@ -12,7 +12,7 @@ type Transaction struct {
 	ID          string `json:"id"`
 	Date        string `json:"date"`
 	Description string `json:"description"`
-	Amount      string `json:"amount"` // kept as string to avoid float precision issues
+	Amount      Amount `json:"amount"`
 	Category    string `json:"category"`
 }
 

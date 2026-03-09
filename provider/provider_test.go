@@ -7,6 +7,15 @@ import (
 	"github.com/prashantv/ccsheets/transaction"
 )
 
+func mustAmount(t *testing.T, s string) transaction.Amount {
+	t.Helper()
+	a, err := transaction.ParseAmount(s)
+	if err != nil {
+		t.Fatalf("ParseAmount(%q): %v", s, err)
+	}
+	return a
+}
+
 func TestChaseParser(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -23,7 +32,7 @@ func TestChaseParser(t *testing.T) {
 				{
 					Date:        "01/15/2026",
 					Description: "TACO PALACE",
-					Amount:      "42.50",
+					Amount:      mustAmount(t, "42.50"),
 					Category:    "Food & Drink",
 				},
 			},
@@ -38,7 +47,7 @@ func TestChaseParser(t *testing.T) {
 				{
 					Date:        "01/10/2026",
 					Description: "AUTOMATIC PAYMENT - THANK",
-					Amount:      "-200.00",
+					Amount:      mustAmount(t, "-200.00"),
 				},
 			},
 		},
@@ -109,7 +118,7 @@ func TestAmexParser(t *testing.T) {
 					ID:          "320260101234567890",
 					Date:        "02/01/2026",
 					Description: "COFFEE ROASTERS",
-					Amount:      "5.75",
+					Amount:      mustAmount(t, "5.75"),
 					Category:    "Merchandise & Supplies-Groceries",
 				},
 			},
@@ -125,7 +134,7 @@ func TestAmexParser(t *testing.T) {
 					ID:          "320260620701362525",
 					Date:        "03/02/2026",
 					Description: "GROCERY MART",
-					Amount:      "36.17",
+					Amount:      mustAmount(t, "36.17"),
 					Category:    "Merchandise & Supplies-Groceries",
 				},
 			},
@@ -171,7 +180,7 @@ func TestCitiParser(t *testing.T) {
 				{
 					Date:        "02/15/2026",
 					Description: "GAS STATION 1234",
-					Amount:      "45.00",
+					Amount:      mustAmount(t, "45.00"),
 				},
 			},
 		},
@@ -185,7 +194,7 @@ func TestCitiParser(t *testing.T) {
 				{
 					Date:        "02/10/2026",
 					Description: "ONLINE PAYMENT THANK YOU",
-					Amount:      "-500.00",
+					Amount:      mustAmount(t, "-500.00"),
 				},
 			},
 		},
@@ -229,7 +238,7 @@ func assertTxn(t *testing.T, got, want transaction.Transaction) {
 		t.Errorf("Description: got %q, want %q", got.Description, want.Description)
 	}
 	if got.Amount != want.Amount {
-		t.Errorf("Amount: got %q, want %q", got.Amount, want.Amount)
+		t.Errorf("Amount: got %s, want %s", got.Amount, want.Amount)
 	}
 	if got.Category != want.Category {
 		t.Errorf("Category: got %q, want %q", got.Category, want.Category)
