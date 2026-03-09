@@ -24,14 +24,22 @@ func main() {
 }
 
 func run() error {
-	if len(os.Args) > 1 && os.Args[1] == "upload" {
-		return runUpload(os.Args[2:])
+	if len(os.Args) < 2 {
+		return fmt.Errorf("usage: ccsheets <command> [flags] <files>...\n\ncommands: parse, upload")
 	}
-	return runPrint(os.Args[1:])
+
+	switch os.Args[1] {
+	case "parse":
+		return runParse(os.Args[2:])
+	case "upload":
+		return runUpload(os.Args[2:])
+	default:
+		return fmt.Errorf("unknown command %q (valid: parse, upload)", os.Args[1])
+	}
 }
 
-func runPrint(args []string) error {
-	fs := flag.NewFlagSet("ccsheets", flag.ContinueOnError)
+func runParse(args []string) error {
+	fs := flag.NewFlagSet("ccsheets parse", flag.ContinueOnError)
 	providerFlag := fs.String("provider", "", "provider name: chase, amex, citi (auto-detected from filename if omitted)")
 	outputFlag := fs.String("output", "table", "output format: table, json")
 	if err := fs.Parse(args); err != nil {
@@ -40,7 +48,7 @@ func runPrint(args []string) error {
 
 	if fs.NArg() == 0 {
 		fs.PrintDefaults()
-		return fmt.Errorf("usage: ccsheets [flags] <csv-file>...")
+		return fmt.Errorf("usage: ccsheets parse [flags] <csv-file>...")
 	}
 
 	txns, err := loadFiles(fs.Args(), *providerFlag)
