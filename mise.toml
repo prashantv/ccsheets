@@ -1,0 +1,14 @@
+[tools]
+gcloud = "latest"
+
+[env]
+_.file = [
+	"sheets.env"
+]
+GOOGLE_APPLICATION_CREDENTIALS = "key.json"
+
+
+[tasks.login]
+run = """
+gcloud auth application-default login --scopes=https://www.googleapis.com/auth/spreadsheets
+"""

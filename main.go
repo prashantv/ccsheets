@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/prashantv/ccsheets/csvtable"
 	"github.com/prashantv/ccsheets/provider"
+	"github.com/prashantv/ccsheets/sheet"
 	"github.com/prashantv/ccsheets/transaction"
 )
 
@@ -22,22 +24,28 @@ func main() {
 }
 
 func run() error {
-	providerFlag := flag.String("provider", "", "provider name: chase, amex, citi (auto-detected from filename if omitted)")
-	outputFlag := flag.String("output", "table", "output format: table, json")
-	flag.Parse()
+	if len(os.Args) > 1 && os.Args[1] == "upload" {
+		return runUpload(os.Args[2:])
+	}
+	return runPrint(os.Args[1:])
+}
 
-	if flag.NArg() == 0 {
-		flag.PrintDefaults()
+func runPrint(args []string) error {
+	fs := flag.NewFlagSet("ccsheets", flag.ContinueOnError)
+	providerFlag := fs.String("provider", "", "provider name: chase, amex, citi (auto-detected from filename if omitted)")
+	outputFlag := fs.String("output", "table", "output format: table, json")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if fs.NArg() == 0 {
+		fs.PrintDefaults()
 		return fmt.Errorf("usage: ccsheets [flags] <csv-file>...")
 	}
 
-	var txns []transaction.Transaction
-	for _, csvPath := range flag.Args() {
-		fileTxns, err := loadFile(csvPath, *providerFlag)
-		if err != nil {
-			return fmt.Errorf("%s: %w", csvPath, err)
-		}
-		txns = append(txns, fileTxns...)
+	txns, err := loadFiles(fs.Args(), *providerFlag)
+	if err != nil {
+		return err
 	}
 
 	switch *outputFlag {
@@ -50,6 +58,54 @@ func run() error {
 	}
 
 	return nil
+}
+
+func runUpload(args []string) error {
+	fs := flag.NewFlagSet("ccsheets upload", flag.ContinueOnError)
+	providerFlag := fs.String("provider", "", "provider name: chase, amex, citi (auto-detected from filename if omitted)")
+	spreadsheetID := fs.String("spreadsheet-id", os.Getenv("CCSHEETS_SPREADSHEET_ID"), "Google Sheets spreadsheet ID (env: CCSHEETS_SPREADSHEET_ID)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if *spreadsheetID == "" {
+		return fmt.Errorf("spreadsheet ID required: use -spreadsheet-id or set CCSHEETS_SPREADSHEET_ID")
+	}
+	if fs.NArg() == 0 {
+		fs.PrintDefaults()
+		return fmt.Errorf("usage: ccsheets upload [flags] <csv-file>...")
+	}
+
+	txns, err := loadFiles(fs.Args(), *providerFlag)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	client, err := sheet.NewClient(ctx, *spreadsheetID, "" /* sheetName */)
+	if err != nil {
+		return err
+	}
+
+	added, err := client.Upload(ctx, txns)
+	if err != nil {
+		return fmt.Errorf("uploading: %w", err)
+	}
+
+	fmt.Printf("uploaded %d new transactions (%d total, %d already existed)\n", added, len(txns), len(txns)-added)
+	return nil
+}
+
+func loadFiles(paths []string, providerName string) ([]transaction.Transaction, error) {
+	var txns []transaction.Transaction
+	for _, csvPath := range paths {
+		fileTxns, err := loadFile(csvPath, providerName)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", csvPath, err)
+		}
+		txns = append(txns, fileTxns...)
+	}
+	return txns, nil
 }
 
 func loadFile(csvPath, providerName string) ([]transaction.Transaction, error) {
