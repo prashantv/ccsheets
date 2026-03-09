@@ -29,38 +29,16 @@ func run() error {
 
 	if flag.NArg() == 0 {
 		flag.PrintDefaults()
-		return fmt.Errorf("usage: ccsheets [flags] <csv-file>")
+		return fmt.Errorf("usage: ccsheets [flags] <csv-file>...")
 	}
-	csvPath := flag.Arg(0)
 
-	name := *providerFlag
-	if name == "" {
-		var err error
-		name, err = detectProvider(csvPath)
+	var txns []transaction.Transaction
+	for _, csvPath := range flag.Args() {
+		fileTxns, err := loadFile(csvPath, *providerFlag)
 		if err != nil {
-			return fmt.Errorf("detect provider from %q: %w", csvPath, err)
+			return fmt.Errorf("%s: %w", csvPath, err)
 		}
-	}
-
-	loader, parser, err := providerFor(name)
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Open(csvPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	table, err := loader(f)
-	if err != nil {
-		return fmt.Errorf("loading CSV: %w", err)
-	}
-
-	txns, err := transaction.ParseAll(table, parser)
-	if err != nil {
-		return fmt.Errorf("parsing transactions: %w", err)
+		txns = append(txns, fileTxns...)
 	}
 
 	switch *outputFlag {
@@ -73,6 +51,34 @@ func run() error {
 	}
 
 	return nil
+}
+
+func loadFile(csvPath, providerName string) ([]transaction.Transaction, error) {
+	if providerName == "" {
+		var err error
+		providerName, err = detectProvider(csvPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	loader, parser, err := providerFor(providerName)
+	if err != nil {
+		return nil, err
+	}
+
+	f, err := os.Open(csvPath)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	table, err := loader(f)
+	if err != nil {
+		return nil, fmt.Errorf("loading CSV: %w", err)
+	}
+
+	return transaction.ParseAll(table, parser)
 }
 
 func detectProvider(path string) (string, error) {
