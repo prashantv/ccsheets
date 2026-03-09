@@ -12,3 +12,12 @@ GOOGLE_APPLICATION_CREDENTIALS = "key.json"
 run = """
 gcloud auth application-default login --scopes=https://www.googleapis.com/auth/spreadsheets
 """
+
+[tasks.upload-all]
+run = """
+for f in data/*
+do
+	echo $f
+	go run . upload $f
+done
+"""
