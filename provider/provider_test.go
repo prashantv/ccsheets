@@ -250,6 +250,21 @@ func TestCitiParser(t *testing.T) {
 			},
 		},
 		{
+			name: "negative credit is refund",
+			giveCSV: csvLines(
+				"Status,Date,Description,Debit,Credit,Member Name",
+				`Cleared,02/14/2026,"COSTCO WHSE #0144 SAN FRANCISCOCA",,-4.35,JANE DOE`,
+			),
+			wantTxns: []transaction.Transaction{
+				{
+					Date:        "2026-02-14",
+					Description: "COSTCO WHSE #0144 SAN FRANCISCO",
+					Location:    "CA",
+					Amount:      mustAmount(t, "-4.35"),
+				},
+			},
+		},
+		{
 			name: "autopay not split",
 			giveCSV: csvLines(
 				"Status,Date,Description,Debit,Credit,Member Name",

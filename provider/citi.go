@@ -35,13 +35,15 @@ func (CitiParser) Parse(table csvtable.Table, row []string) (transaction.Transac
 	debit := strings.TrimSpace(row[table.Column("Debit")])
 	credit := strings.TrimSpace(row[table.Column("Credit")])
 
-	// Debit = charges (positive), Credit = payments (show as negative).
+	// Debit = charges (positive), Credit = payments/refunds (always negative).
+	// Citi uses positive credit values for payments ("1233.79") and
+	// negative credit values for refunds ("-4.35").
 	var amount transaction.Amount
 	if debit != "" {
 		amount, err = transaction.ParseAmount(debit)
 	} else {
 		amount, err = transaction.ParseAmount(credit)
-		if err == nil {
+		if err == nil && !strings.HasPrefix(credit, "-") {
 			amount = amount.Negate()
 		}
 	}
