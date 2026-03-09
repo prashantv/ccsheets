@@ -85,6 +85,8 @@ func (c *Client) appendRows(ctx context.Context, txns []transaction.Transaction)
 	for i, txn := range txns {
 		rows[i] = []interface{}{
 			txn.ID,
+			txn.Provider,
+			txn.Account,
 			txn.Date,
 			txn.Description,
 			txn.Location,
@@ -94,7 +96,7 @@ func (c *Client) appendRows(ctx context.Context, txns []transaction.Transaction)
 	}
 
 	_, err := c.srv.Spreadsheets.Values.
-		Append(c.spreadsheetID, c.sheetRange("A:F"), &sheets.ValueRange{
+		Append(c.spreadsheetID, c.sheetRange("A:H"), &sheets.ValueRange{
 			Values: rows,
 		}).
 		ValueInputOption("USER_ENTERED").

@@ -141,7 +141,17 @@ func loadFile(csvPath, providerName string) ([]transaction.Transaction, error) {
 		return nil, fmt.Errorf("loading CSV: %w", err)
 	}
 
-	return transaction.ParseAll(table, parser)
+	txns, err := transaction.ParseAll(table, parser)
+	if err != nil {
+		return nil, err
+	}
+
+	prov, account := providerAccount(providerName, csvPath)
+	for i := range txns {
+		txns[i].Provider = prov
+		txns[i].Account = account
+	}
+	return txns, nil
 }
 
 func detectProvider(path string) (string, error) {
@@ -155,6 +165,31 @@ func detectProvider(path string) (string, error) {
 		return "citi", nil
 	}
 	return "", fmt.Errorf("unrecognized filename prefix")
+}
+
+// providerAccount extracts the display provider name and account identifier from the filename.
+// Chase filenames: Chase3501_Activity... → ("Chase", "3501")
+// Amex filenames: AmexPlat-... / AmexBlue-... → ("Amex", "Plat" / "Blue")
+// Citi filenames: Citi-... → ("Citi", "")
+func providerAccount(providerName, path string) (string, string) {
+	base := filepath.Base(path)
+	switch strings.ToLower(providerName) {
+	case "chase":
+		// Extract digits between "Chase" and "_".
+		if i := strings.Index(base, "_"); i > 5 {
+			return "Chase", base[5:i]
+		}
+		return "Chase", ""
+	case "amex":
+		// Extract card type between "Amex" and "-".
+		if i := strings.Index(base, "-"); i > 4 {
+			return "Amex", base[4:i]
+		}
+		return "Amex", ""
+	case "citi":
+		return "Citi", ""
+	}
+	return providerName, ""
 }
 
 func providerFor(name string) (func(io.Reader) (csvtable.Table, error), transaction.Parser, error) {
@@ -171,9 +206,9 @@ func providerFor(name string) (func(io.Reader) (csvtable.Table, error), transact
 
 func printTable(txns []transaction.Transaction) {
 	rows := make([][]string, len(txns)+1)
-	rows[0] = []string{"ID", "DATE", "DESCRIPTION", "LOCATION", "AMOUNT", "CATEGORY"}
+	rows[0] = []string{"ID", "PROVIDER", "ACCOUNT", "DATE", "DESCRIPTION", "LOCATION", "AMOUNT", "CATEGORY"}
 	for i, txn := range txns {
-		rows[i+1] = []string{txn.ID, txn.Date, txn.Description, txn.Location, txn.Amount.String(), txn.Category}
+		rows[i+1] = []string{txn.ID, txn.Provider, txn.Account, txn.Date, txn.Description, txn.Location, txn.Amount.String(), txn.Category}
 	}
 
 	// Compute max width per column.

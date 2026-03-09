@@ -10,6 +10,8 @@ import (
 // Transaction is a standardized credit card transaction.
 type Transaction struct {
 	ID          string `json:"id"`
+	Provider    string `json:"provider"`
+	Account     string `json:"account,omitempty"`
 	Date        string `json:"date"`
 	Description string `json:"description"`
 	Location    string `json:"location,omitempty"`
